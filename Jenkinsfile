@@ -38,13 +38,13 @@ pipeline {
     post {
         success {
           script {
-            try { mail to: 'YOUR_EMAIL', subject: "SUCCESS: ${JOB_NAME} #${BUILD_NUMBER}", body: "Build ${BUILD_NUMBER} passed and was deployed.\n${BUILD_URL}" }
+            try { mail to: 'katakamshashidharsai@gmail.com', subject: "SUCCESS: ${JOB_NAME} #${BUILD_NUMBER}", body: "Build ${BUILD_NUMBER} passed and was deployed.\n${BUILD_URL}" }
             catch (e) { echo "Email failed, build still OK: ${e}" }
           }
         }
         failure {
           script {
-            try { mail to: 'YOUR_EMAIL', subject: "FAILED: ${JOB_NAME} #${BUILD_NUMBER}", body: "Build ${BUILD_NUMBER} failed.\n${BUILD_URL}console" }
+            try { mail to: 'katakamshashidharsai@gmail.com', subject: "FAILED: ${JOB_NAME} #${BUILD_NUMBER}", body: "Build ${BUILD_NUMBER} failed.\n${BUILD_URL}console" }
             catch (e) { echo "Email failed: ${e}" }
           }
         }
