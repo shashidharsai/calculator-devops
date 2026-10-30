@@ -1,10 +1,3 @@
-MY_EMAIL="katakamshashidharsai@gmail.com"
-
-cd ~/Downloads/calculator-devops || exit 1
-docker compose down 2>/dev/null
-git checkout main && git pull && git checkout -b feature/full-cicd-pipeline
-
-cat > Jenkinsfile << 'JENKINS_EOF'
 pipeline {
   agent any
   triggers { pollSCM('H/2 * * * *') }
@@ -60,8 +53,3 @@ pipeline {
     }
   }
 }
-JENKINS_EOF
-
-sed -i "s|katakamshashidharsai@gmail.com|$MY_EMAIL|g" Jenkinsfile
-git add Jenkinsfile && git commit -m "Add full CI/CD pipeline: tagging, push, deploy, email, SCM polling"
-git push -u origin feature/full-cicd-pipeline
