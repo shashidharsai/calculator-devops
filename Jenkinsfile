@@ -8,7 +8,7 @@ pipeline {
     COMPOSE_PROJECT_NAME = 'calculator'
   }
   stages {
-    stage('Checkout') { steps { checkout scm; sh 'git log -1 --oneline' } }
+    stage('Checkout') { steps { git branch: 'main', url: 'https://github.com/shashidharsai/calculator-devops.git'; sh 'git log -1 --oneline' } }
     stage('Build') { steps { sh 'mvn -B clean package -DskipTests' } }
     stage('Test') {
       steps { sh 'mvn -B test' }
