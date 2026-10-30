@@ -459,10 +459,4 @@ A successful request should return a JSON response containing the operation and 
 - Add deployment rollback and failure-recovery mechanisms.
 - Introduce security scanning for dependencies and Docker images.
 
-## Author
-
-**Shashidhar Sai**
-
-GitHub: [shashidharsai](https://github.com/shashidharsai)
-
-Repository: [calculator-devops](https://github.com/shashidharsai/calculator-devops)
+ 
