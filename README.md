@@ -69,6 +69,8 @@ docker compose down
 
 Nginx listens on port **8081** and load-balances across two calculator replicas.
 
+CI/CD pipeline tested successfully using Jenkins and Docker.
+
 ## CI/CD pipeline
 
 The `Jenkinsfile` defines these stages: Checkout -> Build -> Test -> Docker Build -> Push -> Deploy.
