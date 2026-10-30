@@ -373,3 +373,4 @@ GitHub: https://github.com/shashidharsai/calculator-devops
 This project demonstrates the integration of Java, Maven, GitHub, Jenkins, Docker, Docker Compose, and Nginx in a practical DevOps workflow.
 
 It provides hands-on experience with application builds, testing, containerization, CI pipeline automation, and running a multi-container application.
+demo 22:22
