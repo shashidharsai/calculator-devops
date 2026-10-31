@@ -1,43 +1,47 @@
 # Calculator DevOps Project
 
-A Java-based Calculator REST API built and tested using Maven, containerized with Docker, and integrated with Jenkins for Continuous Integration (CI). Docker Compose and Nginx are used to run and route requests to the application.
+A Java Calculator REST API with a complete CI/CD pipeline. A push to GitHub is picked up by Jenkins, which builds and tests the code, builds a Docker image tagged with the build number, pushes it to Docker Hub, deploys it with Docker Compose behind Nginx, and sends an email with the result.
+
+- GitHub: https://github.com/shashidharsai/calculator-devops
+- Docker Hub: https://hub.docker.com/r/shashidhark/calculator-api
 
 ## Project Overview
 
-This project demonstrates how DevOps tools can work together to build, test, package, and run a Java application.
+The calculator itself is deliberately simple. The purpose of the project is to show how modern DevOps tools work together to take code from a developer's machine to a running, tested and published application with no manual steps.
 
-The project uses Jenkins to automate the build and testing process, Docker to package the application into a container image, and Docker Compose with Nginx to run and access the application.
+```text
+Developer -> GitHub -> Jenkins -> Docker Hub
+                          |
+                          +-> Docker Compose (2 replicas + Nginx) -> Email notification
+```
 
 ## Technologies Used
 
 | Technology | Purpose |
 |---|---|
-| Java 21 | Application development |
+| Java 21 | Application development (plain Java, no framework) |
 | Maven | Build management and testing |
-| Git | Version control |
-| GitHub | Source code hosting |
-| Jenkins | CI pipeline automation |
-| Docker | Application containerization |
-| Docker Compose | Running multiple containers |
-| Nginx | Routing requests to the calculator service |
-| Ubuntu | Development and execution environment |
-| VirtualBox | Running Ubuntu in a virtual machine |
+| Git / GitHub | Version control and source hosting |
+| Jenkins | CI/CD pipeline automation |
+| Docker | Application containerization (multi-stage image) |
+| Docker Hub | Registry that stores the published images |
+| Docker Compose | Running the calculator replicas and Nginx together |
+| Nginx | Reverse proxy and single entry point |
+| Ubuntu on VirtualBox | Environment where Jenkins, Docker and Compose run |
 
 ## Features
 
-- Calculator REST API supporting addition, subtraction, multiplication, and division.
-- HTTP endpoints for performing calculations.
-- Input validation and error handling.
-- Maven-based application build and test process.
-- Docker image creation using a Dockerfile.
-- Jenkins pipeline integrated with GitHub.
-- Docker Compose configuration for running the application.
-- Nginx reverse proxy for accessing the calculator API.
-- Health-check endpoint for checking application availability.
+- REST API for addition, subtraction, multiplication and division, returning JSON.
+- Input validation: HTTP 400 for missing or invalid parameters and for division by zero.
+- Health-check endpoint at `/actuator/health`.
+- 17 automated tests (8 unit tests and 9 integration tests).
+- Multi-stage Dockerfile with dependency caching; the container runs as a non-root user (`app`).
+- Docker Compose stack with 2 calculator replicas, health checks, restart policy and a private network.
+- Jenkins pipeline defined in the `Jenkinsfile`, triggered automatically by Poll SCM.
+- Images tagged with the Jenkins build number and published to Docker Hub.
+- Automatic deployment with a health check, and email notification on success or failure.
 
 ## API Endpoints
-
-The API provides the following endpoints:
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -47,330 +51,148 @@ The API provides the following endpoints:
 | GET | `/api/v1/divide?a=10&b=4` | Divides the first number by the second |
 | GET | `/actuator/health` | Checks application health |
 
-### Example Request
+Example:
 
 ```bash
-curl "http://localhost:8081/api/v1/add?a=2&b=3"
+curl "http://localhost:8081/api/v1/multiply?a=6&b=7"
 ```
-
-Example response:
 
 ```json
-{
-  "operation": "add",
-  "a": 2,
-  "b": 3,
-  "result": 5
-}
+{"operation":"multiply","a":6,"b":7,"result":42}
 ```
-
-The exact response fields depend on the application's implementation.
-
-### Error Handling
-
-The API is designed to return HTTP 400 responses for invalid or missing parameters and division by zero.
 
 ## Project Structure
 
 ```text
 calculator-devops/
-├── src/
-│   └── main/
-├── pom.xml
-├── Dockerfile
-├── docker-compose.yml
-├── Jenkinsfile
-├── nginx/
+├── src/                 Java source code and tests
+├── nginx/               Nginx configuration
+├── pom.xml              Maven build configuration
+├── Dockerfile           Multi-stage image definition
+├── docker-compose.yml   Calculator replicas + Nginx
+├── Jenkinsfile          CI/CD pipeline definition
 ├── .gitignore
 ├── .dockerignore
 └── README.md
 ```
 
-The contents of the `src/` and `nginx/` directories may include additional files.
-
 ## Prerequisites
 
-Install or configure the following tools:
-
-- Java Development Kit (JDK) 21
-- Maven 3.8 or later
+- JDK 21 and Maven 3.8 or later
 - Git
-- Docker Engine
-- Docker Compose
-- Jenkins
+- Docker Engine and Docker Compose
+- Jenkins (with the Mailer plugin)
 
-The project can be developed and tested inside an Ubuntu virtual machine.
+Everything (Jenkins, Docker and Compose) runs inside one Ubuntu virtual machine.
 
-## Build the Application
-
-Clone the repository:
+## Build and Test Locally
 
 ```bash
 git clone https://github.com/shashidharsai/calculator-devops.git
-```
-
-Navigate into the project directory:
-
-```bash
 cd calculator-devops
-```
-
-Build the application:
-
-```bash
 mvn clean package
-```
-
-Run the tests:
-
-```bash
 mvn test
 ```
 
-The packaged JAR is expected to be available at:
+The packaged JAR is `target/calculator.jar`.
 
-```text
-target/calculator.jar
-```
-
-This filename depends on the Maven configuration.
-
-## Run the Application Locally
-
-After building the application, run:
-
-```bash
-java -jar target/calculator.jar
-```
-
-Keep the application running. Open another terminal and test the API:
-
-```bash
-curl "http://localhost:8080/api/v1/add?a=2&b=3"
-```
-
-Check application health:
-
-```bash
-curl "http://localhost:8080/actuator/health"
-```
-
-## Docker
-
-### Build the Docker Image
-
-From the project root directory, run:
+## Run with Docker
 
 ```bash
 docker build -t calculator-devops:latest .
+docker run -d --name calc-test -p 9090:8080 calculator-devops:latest
+curl "http://localhost:9090/api/v1/add?a=2&b=3"
+docker stop calc-test && docker rm calc-test
 ```
 
-Verify that the image exists:
+Port 8080 on the host is used by Jenkins, so the container is published on port 9090.
+
+## Run with Docker Compose and Nginx
 
 ```bash
-docker images
-```
-
-### Run the Container
-
-```bash
-docker run -d --name calculator -p 8080:8080 calculator-devops:latest
-```
-
-Test the application:
-
-```bash
-curl "http://localhost:8080/api/v1/add?a=2&b=3"
-```
-
-Check the container logs:
-
-```bash
-docker logs calculator
-```
-
-Stop and remove the container when finished:
-
-```bash
-docker stop calculator
-docker rm calculator
-```
-
-If port 8080 is already in use, stop the existing service or choose another host port.
-
-## Docker Compose and Nginx
-
-Docker Compose is used to manage the application's container configuration. Nginx provides an entry point for API requests and forwards them to the calculator service.
-
-The configured Nginx endpoint is:
-
-```text
-http://localhost:8081
-```
-
-### Start the Services
-
-From the project root directory, run:
-
-```bash
-docker compose up -d --build
-```
-
-### Check Service Status
-
-```bash
-docker compose ps
-```
-
-### Test the API Through Nginx
-
-Addition:
-
-```bash
+docker compose up -d --build     # build and start the services
+docker compose ps                # check that they are running
 curl "http://localhost:8081/api/v1/add?a=2&b=3"
-```
-
-Expected result: `5`.
-
-Division:
-
-```bash
-curl "http://localhost:8081/api/v1/divide?a=10&b=4"
-```
-
-Expected result: `2.5`.
-
-Health check:
-
-```bash
 curl "http://localhost:8081/actuator/health"
+docker compose logs -f           # follow the logs
+docker compose down              # stop and remove the containers
 ```
 
-### View Logs
+The stack contains:
+
+- **calculator**: 2 replicas of the API, image `${DOCKERHUB_USER}/calculator-api:${IMAGE_TAG}`, with a health check, a restart policy and a memory limit.
+- **nginx** (`nginx:1.27-alpine`): the only published port (8081); it starts after the calculator is healthy and forwards requests to both replicas.
+
+Both services share the private network `calc-net`. To run a specific published image:
 
 ```bash
-docker compose logs
+DOCKERHUB_USER=shashidhark IMAGE_TAG=<build-number> docker compose up -d
 ```
 
-To view logs continuously:
+## Jenkins CI/CD Pipeline
 
-```bash
-docker compose logs -f
-```
-
-### Stop the Services
-
-```bash
-docker compose down
-```
-
-## Jenkins CI Pipeline
-
-Jenkins is configured to retrieve the project from GitHub using Pipeline from SCM.
-
-Repository:
-
-```text
-https://github.com/shashidharsai/calculator-devops.git
-```
-
-Branch:
-
-```text
-main
-```
-
-Pipeline script:
-
-```text
-Jenkinsfile
-```
-
-Jenkins dashboard:
-
-```text
-http://localhost:8080
-```
+Jenkins uses **Pipeline from SCM**: it reads the `Jenkinsfile` from the `main` branch of the GitHub repository. A `pollSCM` trigger checks GitHub about every 2 minutes, so a new commit starts a build automatically (a webhook is not possible because Jenkins runs inside a VirtualBox VM that GitHub cannot reach).
 
 ### Pipeline Stages
 
-The current Jenkins pipeline contains the following stages:
+| # | Stage | What it does |
+|---|---|---|
+| 1 | Checkout | Retrieves the latest source code from GitHub |
+| 2 | Build | `mvn -B clean package -DskipTests` creates the JAR |
+| 3 | Test | `mvn -B test` runs the 17 tests and publishes the JUnit reports; a failure stops the pipeline |
+| 4 | Docker Build | Builds `shashidhark/calculator-api:<build number>` and also tags it `latest` |
+| 5 | Push to Docker Hub | Logs in with the Jenkins credential `dockerhub-creds` and pushes both tags |
+| 6 | Deploy | `docker compose up -d`, then polls `/actuator/health` through Nginx and fails if it is not UP in 60 seconds |
+| Post | Email | Sends an email on success and on failure |
 
-1. **Checkout:** Retrieves the source code from GitHub.
-2. **Build and Test:** Runs the Maven build and tests.
-3. **Package Application:** Packages the application.
-4. **Build Docker Image:** Builds the Docker image.
-5. **Verify Docker Image:** Checks that the image was created.
+The deploy step can be re-run safely: `docker compose up -d` only recreates containers whose image or configuration changed.
 
-A successful Jenkins build indicates that the configured pipeline stages completed successfully.
+### One-time Jenkins Setup
 
-## CI Workflow
+1. Add a credential in Manage Jenkins, Credentials: kind *Username with password*, username `shashidhark`, password a Docker Hub access token (Read and Write), ID `dockerhub-creds`.
+2. Configure email in Manage Jenkins, System: set the System Admin e-mail address, then under E-mail Notification use `smtp.gmail.com`, SMTP authentication with a Gmail app password, SSL, port 465, and send a test e-mail.
+3. Make sure the `jenkins` user can run Docker commands (member of the `docker` group).
+4. Create a Pipeline job that uses *Pipeline script from SCM* with this repository and the `main` branch, then run it once so the Poll SCM trigger is registered.
 
-The implemented workflow is:
+## CI/CD Workflow
 
 ```text
-Developer
-   |
-   v
-GitHub Repository
-   |
-   v
-Jenkins Pipeline
-   |
-   v
-Checkout Source Code
-   |
-   v
-Maven Build and Tests
-   |
-   v
-Package Java Application
-   |
-   v
-Build Docker Image
-   |
-   v
-Verify Docker Image
+Developer pushes to GitHub
+        |
+        v
+Jenkins detects the commit (Poll SCM)
+        |
+        v
+Checkout -> Build -> Test -> Docker Build -> Push to Docker Hub -> Deploy
+        |
+        v
+Email: SUCCESS or FAILED
 ```
-
-Docker Compose and Nginx are used separately to run and access the application.
 
 ## Verification
 
-The following functionality has been verified during project testing:
+The following has been verified:
 
-- Jenkins pipeline execution completed successfully.
-- Docker image creation through the pipeline succeeded.
-- Docker Compose started the application.
-- API requests through Nginx on port 8081 returned the expected results for addition and division.
-
-Docker Hub publishing and automated deployment through Jenkins are not included in the current pipeline.
+- All 17 Maven tests pass, locally and in Jenkins.
+- The container runs as the non-root user `app`.
+- Docker Compose runs two healthy calculator replicas plus Nginx on port 8081.
+- Jenkins completes all stages, pushes build-numbered tags to Docker Hub, deploys, and sends a build email.
+- Pushing a change to GitHub starts a new build automatically.
 
 ## Security Considerations
 
-- Do not commit passwords, access tokens, or other secrets to GitHub.
-- Use Jenkins Credentials when adding credentials to a future pipeline.
-- Avoid exposing Jenkins or application ports publicly without appropriate security controls.
-- Use appropriate permissions for project files and Docker resources.
+- No passwords or tokens are stored in GitHub. The Docker Hub token and the SMTP app password exist only in Jenkins.
+- The Jenkinsfile references the credential by ID and passes the password to `docker login` through stdin.
+- Do not expose Jenkins or the application ports to the public internet without protection.
+- Keep Docker, Jenkins and Java updated.
 
 ## Future Improvements
 
-Possible extensions include:
-
-- Publishing Docker images to Docker Hub from Jenkins.
-- Automating application deployment through Jenkins.
-- Triggering builds automatically when changes are pushed to GitHub.
-- Adding more automated API tests.
-- Adding monitoring and logging.
-- Deploying the application to a cloud environment.
-
-## Repository
-
-GitHub: https://github.com/shashidharsai/calculator-devops
+- Trigger builds with a GitHub webhook instead of polling.
+- Add more automated API tests.
+- Add monitoring and logging.
+- Deploy to a cloud environment.
 
 ## Conclusion
 
-This project demonstrates the integration of Java, Maven, GitHub, Jenkins, Docker, Docker Compose, and Nginx in a practical DevOps workflow.
-
-It provides hands-on experience with application builds, testing, containerization, CI pipeline automation, and running a multi-container application.
-demo 22:22
+The project delivers a complete CI/CD workflow: code pushed to GitHub is automatically built, tested, packaged into a build-numbered Docker image, published to Docker Hub, deployed with Docker Compose behind Nginx, health-checked, and reported by email.
